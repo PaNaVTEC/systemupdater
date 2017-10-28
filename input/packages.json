@@ -1,0 +1,19 @@
+[
+  {
+    "id": "i3",
+    "commands": [
+      "install packages ./yaourt_i3.txt",
+      "symlink from $INSTALL_DIR/config/i3 to ~/.config/i3",
+      "install polybar"
+    ],
+    "dependencies": [
+      {
+        "id": "polybar",
+        "commands": [
+          "install packages ./yaourt_polybar.txt",
+          "symlink from $INSTALL_DIR/config/polybar/ to ~/.config/polybar/config"
+        ]
+      }
+    ]
+  }
+]

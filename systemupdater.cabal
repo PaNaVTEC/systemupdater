@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Data.String.Strip, SystemUpdater.Data
+  exposed-modules:     SystemUpdater.Data
   build-depends:       base >= 4.7 && < 5
                      , turtle
                      , aeson >= 0.10

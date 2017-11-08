@@ -7,5 +7,5 @@ module SystemUpdater.Data where
 import           Data.Aeson
 import           GHC.Generics
 
-type Packages = [Package] deriving (Show, Generic, FromJSON, Functor)
+newtype Packages = Packages [Package] deriving (Show, Generic, FromJSON)
 data Package = Package {id :: String, commands :: [String]} deriving (Show, Generic, FromJSON)

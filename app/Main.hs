@@ -16,7 +16,7 @@ install' :: Maybe Packages -> IO()
 install' (Just packages) = return () --install packages
 install' Nothing         = return ()
 
-install ::  Packages -> Packages
-install = fmap go
+install ::  Packages -> [()]
+install (Packages ps) = fmap go ps
   where go ::  Package -> ()
         go (Package _ commands) = ()

@@ -1,22 +1,17 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import           Data.Aeson           (decode)
-import           Data.ByteString.Lazy (readFile)
+import           Control.Monad.IO.Class
+import           Data.Text              (pack)
 import           SystemUpdater.Data
+import           Turtle
 
 main :: IO ()
 main = do
-  packages <- parsePackages
-  install' packages
+  yaourt [YaourtPackage "shunit2", YaourtPackage "shellcheck-static"]
+  return ()
 
-parsePackages ::  IO (Maybe Packages)
-parsePackages = fmap decode (Data.ByteString.Lazy.readFile "./input/packages.json")
-
-install' :: Maybe Packages -> IO()
-install' (Just packages) = return () --install packages
-install' Nothing         = return ()
-
-install ::  Packages -> [()]
-install (Packages ps) = fmap go ps
-  where go ::  Package -> ()
-        go (Package _ commands) = ()
+yaourt :: [YaourtPackage] -> IO [ExitCode]
+yaourt = sequence . fmap installSingle
+  where installSingle (YaourtPackage x) = shell (pack $ "yaourt -S --noconfirm " ++ x) empty

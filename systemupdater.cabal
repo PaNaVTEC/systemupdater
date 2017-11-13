@@ -19,6 +19,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , turtle
                      , text
+                     , containers 
                      , aeson >= 0.10
   default-language:    Haskell2010
 
@@ -31,6 +32,7 @@ executable systemupdater
                      , turtle
                      , text
                      , bytestring
+                     , containers 
                      , aeson >= 0.10
   default-language:    Haskell2010
 
@@ -41,6 +43,7 @@ test-suite systemupdater-test
   build-depends:       base
                      , systemupdater
                      , hspec
+                     , containers 
                      , QuickCheck
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010

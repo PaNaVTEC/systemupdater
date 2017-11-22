@@ -11,25 +11,26 @@ import           Data.Tuple
 import           SystemUpdater.Data
 import           Turtle
 
-data PackageGroup = PackageGroup {id    :: String, state :: State}
-data State = Success | Failure [YaourtPackage]
+data PackageGroupExitState = Success String | Failure String [YaourtPackage]
+type PackageExitCode = (YaourtPackage, ExitCode)
 
 main :: IO ()
 main = do
   return ()
 
--- refactorizar este codigo para extraer la logica relacionada
--- con el mapping de exitcodes a packagroup y razonar si esta logica no deberia
--- de estar en `yin`
-bash :: IO PackageGroup
-bash = toPackageGroup <$> fmap snd <$> Map.toList <$> snd <$> Map.partitionWithKey (\k _ -> k == ExitSuccess) <$> Map.fromList <$> fmap swap <$> yin packages
+bash :: IO PackageGroupExitState
+bash = toState "Bash" . failedPackages <$> yin packages
   where
-    toPackageGroup []  = PackageGroup id Success
-    toPackageGroup pkg = PackageGroup id (Failure pkg)
-    id = "Bash"
     packages = [YaourtPackage "shunit2", YaourtPackage "shellcheck-static"]
 
-yin :: [YaourtPackage] -> IO [(YaourtPackage, ExitCode)]
+toState :: String -> [YaourtPackage] -> PackageGroupExitState
+toState id []  = Success id
+toState id pkg = Failure id pkg
+
+failedPackages :: [PackageExitCode] -> [YaourtPackage]
+failedPackages pkgs = fst <$> filter (\a -> snd a /= ExitSuccess) pkgs
+
+yin :: [YaourtPackage] -> IO [PackageExitCode]
 yin pkgs = zip pkgs <$> installGroup pkgs
   where
     installGroup pkgs = sequence $ installSingle <$> pkgs

@@ -2,11 +2,12 @@
 
 module Main where
 
+import           Control.Monad
 import           Control.Monad.IO.Class
 import           Data.Function
 import           Data.List
 import qualified Data.Map               as Map
-import           Data.Text              (pack)
+import           Data.Text              (pack, unpack)
 import           Data.Tuple
 import           SystemUpdater.Data
 import           Turtle
@@ -22,6 +23,17 @@ bash :: IO PackageGroupExitState
 bash = toState "Bash" . failedPackages <$> yin packages
   where
     packages = [YaourtPackage "shunit2", YaourtPackage "shellcheck-static"]
+
+installGo :: IO PackageGroupExitState
+installGo = do
+  failPackages <- toState "Go" . failedPackages <$> yin packages
+  (\h -> h </> "go/bin") <$> home >>= mktree
+  return failPackages
+  where
+    packages = [YaourtPackage "go"]
+
+mktrees :: [Turtle.FilePath] -> IO ()
+mktrees ps = mapM_ mktree ps
 
 toState :: String -> [YaourtPackage] -> PackageGroupExitState
 toState id []  = Success id

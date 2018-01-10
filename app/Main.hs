@@ -16,8 +16,7 @@ data PackageGroupExitState = Success String | Failure String [YaourtPackage]
 type PackageExitCode = (YaourtPackage, ExitCode)
 
 main :: IO ()
-main = do
-  return ()
+main = return ()
 
 bash :: IO PackageGroupExitState
 bash = toState "Bash" . failedPackages <$> yin packages
@@ -27,10 +26,14 @@ bash = toState "Bash" . failedPackages <$> yin packages
 installGo :: IO PackageGroupExitState
 installGo = do
   failPackages <- toState "Go" . failedPackages <$> yin packages
-  (\h -> h </> "go/bin") <$> home >>= mktree
+  (sequence $ prependHome <$> ["go/bin", "go/src"]) >>= mktrees
+  shell (pack $ "go get -u github.com/golang/lint/golint") empty
   return failPackages
   where
     packages = [YaourtPackage "go"]
+
+prependHome :: String -> IO Turtle.FilePath
+prependHome path = (\h -> h </> fromText (pack path)) <$> home
 
 mktrees :: [Turtle.FilePath] -> IO ()
 mktrees ps = mapM_ mktree ps
@@ -47,9 +50,3 @@ yin pkgs = zip pkgs <$> installGroup pkgs
   where
     installGroup pkgs = sequence $ installSingle <$> pkgs
     installSingle (YaourtPackage x) = shell (pack $ "yaourt -S --noconfirm " ++ x) empty
-
---  installGo() {
---  yaourt --noconfirm -S go
---  mkdir -p "$HOME/go/{bin,src}"
---  go get -u github.com/golang/lint/golint
---}

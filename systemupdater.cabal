@@ -33,6 +33,7 @@ executable systemupdater
                      , text
                      , bytestring
                      , containers 
+                     , system-filepath
                      , aeson >= 0.10
   default-language:    Haskell2010
 

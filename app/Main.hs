@@ -17,13 +17,14 @@ import           Turtle
 data PackageGroupExitState = Success String | Failure String [YaourtPackage]
 type PackageExitCode = (YaourtPackage, ExitCode)
 
+-- TODO: manage errors in a better way.
+-- exitcode per package / command
 main :: IO ()
 main = do
-  installGit
   return ()
 
-bash :: IO PackageGroupExitState
-bash = toState "Bash" . failedPackages <$> yin packages
+installBash :: IO PackageGroupExitState
+installBash = toState "Bash" . failedPackages <$> yin packages
   where
     packages = [YaourtPackage "shunit2", YaourtPackage "shellcheck-static"]
 
@@ -35,6 +36,31 @@ installGo = do
   return failPackages
   where
     packages = [YaourtPackage "go"]
+
+installGit :: IO PackageGroupExitState
+installGit = do
+  failPackages <- toState "Git" . failedPackages <$> yin packages
+  lnsfn (fromText "./config/git/gitconfig") (fromText "~/.gitconfig")
+  createGitIgnore
+  return failPackages
+  where
+    packages = [YaourtPackage "diff-so-fancy", YaourtPackage "gibo"]
+    createGitIgnore = do
+      return $ run "gibo --upgrade"
+      content <- return $ run gibo
+      path <- (~/) ".gitignore.global"
+      createFileIfNotExists path content
+      append path ".tern-project"
+    gibo = "gibo Emacs Vim JetBrains Ensime Tags Vagrant Windows macOS Linux Archives"
+
+yin :: [YaourtPackage] -> IO [PackageExitCode]
+yin pkgs = zip pkgs <$> installGroup pkgs
+  where
+    installGroup pkgs = sequence $ installSingle <$> pkgs
+    installSingle (YaourtPackage x) = shell (pack $ "yaourt -S --noconfirm " ++ x) empty
+
+lnsfn :: Turtle.FilePath -> Turtle.FilePath -> IO ExitCode
+lnsfn s d = shell (pack $ "ln -sfn " ++ (encodeString s) ++  " " ++ (encodeString d)) empty
 
 (~/) :: MonadIO io => String -> io Turtle.FilePath
 (~/) path = (\h -> h </> fromText (pack path)) <$> home
@@ -49,34 +75,10 @@ toState id pkg = Failure id pkg
 failedPackages :: [PackageExitCode] -> [YaourtPackage]
 failedPackages pkgs = fst <$> filter (\a -> snd a /= ExitSuccess) pkgs
 
-yin :: [YaourtPackage] -> IO [PackageExitCode]
-yin pkgs = zip pkgs <$> installGroup pkgs
-  where
-    installGroup pkgs = sequence $ installSingle <$> pkgs
-    installSingle (YaourtPackage x) = shell (pack $ "yaourt -S --noconfirm " ++ x) empty
-
-installGit :: IO ()
-installGit = do
-  failPackages <- toState "Git" . failedPackages <$> yin packages
-  lnsfn (fromText "./config/git/gitconfig") (fromText "~/.gitconfig")
-  createGitIgnore
-  where
-    packages = [YaourtPackage "diff-so-fancy", YaourtPackage "gibo"]
-    createGitIgnore = do
-      shell (pack $ "gibo --upgrade") empty
-      content <- return $ run gibo
-      path <- (~/) ".gitignore.global"
-      createFileIfNotExists path content
-      append path ".tern-project"
-    gibo = "gibo Emacs Vim JetBrains Ensime Tags Vagrant Windows macOS Linux Archives"
-
 createFileIfNotExists :: MonadIO io => Turtle.FilePath -> Shell Line -> io ()
 createFileIfNotExists filepath line = do
   touch filepath
   output filepath line
-
-lnsfn :: Turtle.FilePath -> Turtle.FilePath -> IO ExitCode
-lnsfn s d = shell (pack $ "ln -sfn " ++ (encodeString s) ++  " " ++ (encodeString d)) empty
 
 run :: String -> Shell Line
 run command = inshell (pack command) empty

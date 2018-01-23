@@ -30,14 +30,14 @@ bash = toState "Bash" . failedPackages <$> yin packages
 installGo :: IO PackageGroupExitState
 installGo = do
   failPackages <- toState "Go" . failedPackages <$> yin packages
-  (sequence $ prependHome <$> ["go/bin", "go/src"]) >>= mktrees
-  shell (pack $ "go get -u github.com/golang/lint/golint") empty
+  traverse (~/) ["go/bin", "go/src"] >>= mktrees
+  return $ run "go get -u github.com/golang/lint/golint"
   return failPackages
   where
     packages = [YaourtPackage "go"]
 
-prependHome :: MonadIO io => String -> io Turtle.FilePath
-prependHome path = (\h -> h </> fromText (pack path)) <$> home
+(~/) :: MonadIO io => String -> io Turtle.FilePath
+(~/) path = (\h -> h </> fromText (pack path)) <$> home
 
 mktrees :: [Turtle.FilePath] -> IO ()
 mktrees ps = mapM_ mktree ps
@@ -64,8 +64,8 @@ installGit = do
     packages = [YaourtPackage "diff-so-fancy", YaourtPackage "gibo"]
     createGitIgnore = do
       shell (pack $ "gibo --upgrade") empty
-      content <- return $ inshell gibo empty
-      path <- prependHome ".gitignore.global"
+      content <- return $ run gibo
+      path <- (~/) ".gitignore.global"
       createFileIfNotExists path content
       append path ".tern-project"
     gibo = "gibo Emacs Vim JetBrains Ensime Tags Vagrant Windows macOS Linux Archives"
@@ -77,3 +77,6 @@ createFileIfNotExists filepath line = do
 
 lnsfn :: Turtle.FilePath -> Turtle.FilePath -> IO ExitCode
 lnsfn s d = shell (pack $ "ln -sfn " ++ (encodeString s) ++  " " ++ (encodeString d)) empty
+
+run :: String -> Shell Line
+run command = inshell (pack command) empty

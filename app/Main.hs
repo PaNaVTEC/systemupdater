@@ -19,6 +19,7 @@ type PackageExitCode = (YaourtPackage, ExitCode)
 
 main :: IO ()
 main = do
+  installGit
   return ()
 
 bash :: IO PackageGroupExitState
@@ -35,7 +36,7 @@ installGo = do
   where
     packages = [YaourtPackage "go"]
 
-prependHome :: String -> IO Turtle.FilePath
+prependHome :: MonadIO io => String -> io Turtle.FilePath
 prependHome path = (\h -> h </> fromText (pack path)) <$> home
 
 mktrees :: [Turtle.FilePath] -> IO ()
@@ -58,17 +59,21 @@ installGit :: IO ()
 installGit = do
   failPackages <- toState "Git" . failedPackages <$> yin packages
   lnsfn (fromText "./config/git/gitconfig") (fromText "~/.gitconfig")
-  --TODO: config gibo
-  return ()
+  createGitIgnore
   where
     packages = [YaourtPackage "diff-so-fancy", YaourtPackage "gibo"]
+    createGitIgnore = do
+      shell (pack $ "gibo --upgrade") empty
+      content <- return $ inshell gibo empty
+      path <- prependHome ".gitignore.global"
+      createFileIfNotExists path content
+      append path ".tern-project"
+    gibo = "gibo Emacs Vim JetBrains Ensime Tags Vagrant Windows macOS Linux Archives"
+
+createFileIfNotExists :: MonadIO io => Turtle.FilePath -> Shell Line -> io ()
+createFileIfNotExists filepath line = do
+  touch filepath
+  output filepath line
 
 lnsfn :: Turtle.FilePath -> Turtle.FilePath -> IO ExitCode
 lnsfn s d = shell (pack $ "ln -sfn " ++ (encodeString s) ++  " " ++ (encodeString d)) empty
-
---installGit() {
---  # Global git ignores
---  gibo --upgrade
---  gibo Emacs Vim JetBrains Ensime Tags Vagrant Windows macOS Linux Archives >> ~/.gitignore.global
---  echo ".tern-project" >> ~/.gitignore.global
---}

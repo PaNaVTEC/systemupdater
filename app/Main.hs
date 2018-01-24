@@ -40,7 +40,7 @@ installGo = do
 installGit :: IO PackageGroupExitState
 installGit = do
   failPackages <- toState "Git" . failedPackages <$> yin packages
-  lnsfn (fromText "./config/git/gitconfig") (fromText "~/.gitconfig")
+  lnsfn (filePath "./config/git/gitconfig") (filePath "~/.gitconfig")
   createGitIgnore
   return failPackages
   where
@@ -49,7 +49,7 @@ installGit = do
       return $ run "gibo --upgrade"
       content <- return $ run gibo
       path <- (~/) ".gitignore.global"
-      createFileIfNotExists path content
+      content &> path
       append path ".tern-project"
     gibo = "gibo Emacs Vim JetBrains Ensime Tags Vagrant Windows macOS Linux Archives"
 
@@ -63,7 +63,10 @@ lnsfn :: Turtle.FilePath -> Turtle.FilePath -> IO ExitCode
 lnsfn s d = shell (pack $ "ln -sfn " ++ (encodeString s) ++  " " ++ (encodeString d)) empty
 
 (~/) :: MonadIO io => String -> io Turtle.FilePath
-(~/) path = (\h -> h </> fromText (pack path)) <$> home
+(~/) path = (\h -> h </> filePath path ) <$> home
+
+filePath :: String -> Turtle.FilePath
+filePath p = fromText $ pack p
 
 mktrees :: [Turtle.FilePath] -> IO ()
 mktrees ps = mapM_ mktree ps
@@ -75,10 +78,13 @@ toState id pkg = Failure id pkg
 failedPackages :: [PackageExitCode] -> [YaourtPackage]
 failedPackages pkgs = fst <$> filter (\a -> snd a /= ExitSuccess) pkgs
 
-createFileIfNotExists :: MonadIO io => Turtle.FilePath -> Shell Line -> io ()
-createFileIfNotExists filepath line = do
+(&>) :: MonadIO io => Shell Line -> Turtle.FilePath -> io ()
+line &> filepath = do
   touch filepath
   output filepath line
+
+createFileIfNotExists :: MonadIO io => Turtle.FilePath -> Shell Line -> io ()
+createFileIfNotExists = flip (&>)
 
 run :: String -> Shell Line
 run command = inshell (pack command) empty

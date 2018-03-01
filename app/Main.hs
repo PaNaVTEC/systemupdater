@@ -2,14 +2,17 @@
 
 module Main where
 
+import           Control.Exception.Base    (bracket)
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Control.Monad.Managed     (MonadManaged, managed_)
 import           Data.Function
 import           Data.List
 import qualified Data.Map                  as Map
 import           Data.Text                 (Text, pack, unpack)
 import           Data.Tuple
 import           Filesystem.Path.CurrentOS (encodeString)
+import           System.Process            (proc)
 import           SystemUpdater.Data
 import           Turtle
 
@@ -17,11 +20,73 @@ import           Turtle
 data PackageGroupExitState = Success String | Failure String [YaourtPackage]
 type PackageExitCode = (YaourtPackage, ExitCode)
 
+-- TODO: Find a way to execute commands in the same shell like (cd ~ && mkdir hola)
 -- TODO: manage errors in a better way.
 -- exitcode per package / command
+-- TODO specify dotfiles directory
+
+withShell :: Turtle.FilePath -> IO r -> IO r
+withShell path f = bracket (cd path) (\_ -> cd "/home/panavtec/Code/Github/systemupdater") (\_ -> f)
+
+withPath :: Turtle.FilePath -> Managed ()
+withPath path = managed_ (withShell path)
+
 main :: IO ()
 main = do
+  foo
+  dir <- pwd
+  fileName <- return $ dir </> "EsteEsElCurrent"
+  createFileIfNotExists fileName empty
   return ()
+
+  where
+    foo :: IO ()
+    foo = do
+      with (withPath "/home/panavtec") (\_ -> createFileInHome)
+    createFileInHome :: IO ()
+    createFileInHome = do
+      dir <- pwd
+      fileName <- return $ dir </> "EsteEsHome"
+      createFileIfNotExists fileName empty
+      return ()
+
+--   home >>= cd
+--   view pwd
+--   newShell
+--   view pwd
+--   d <- single $ f
+--   print d
+--   return ()
+--   where f = do
+--           run' "cd ~" .&&. run' "pwd"
+
+--installEmacs() {
+--  (cd "$dir/config/emacs/install/" && makepkg -si)
+--  mkdir -p "$HOME/.emacs.saves"
+--  mkdir -p "$HOME/.emacs.undo"
+--  touch "$HOME/.emacs.d/custom.el"
+--
+--  yaourt -S --noconfirm xsel # Fixes clipboard
+--  git clone https://github.com/jdee-emacs/jdee-server.git ~/.jdee-server
+--  (
+--    cd ~/.jdee-server
+--    mvn -Dmaven.test.skip=true package
+--  )
+--
+--  ln -sfn "$dir/config/emacs/init.el" "$HOME/.emacs.d/"
+--  ln -sfn "$dir/config/emacs/lisp/" "$HOME/.emacs.d/lisp"
+--  ln -sfn "$dir/config/emacs/snippets/" "$HOME/.emacs.d/snippets"
+--
+--  mkdir -p "$HOME/.config/systemd/user"
+--  ln -sfn "$dir/config/units/emacs.service" "$HOME/.config/systemd/user/emacs.service"
+--  systemctl --user enable --now emacs
+--}
+
+--installEmacs :: IO PackageGroupExitState
+--installEmacs = do
+--
+--  using (cd "./config/emacs/install/") >>=
+--  return $ run "makepkg -si"
 
 installBash :: IO PackageGroupExitState
 installBash = toState "Bash" . failedPackages <$> yin packages
@@ -88,3 +153,9 @@ createFileIfNotExists = flip (&>)
 
 run :: String -> Shell Line
 run command = inshell (pack command) empty
+
+run' :: String -> Shell ExitCode
+run' command = shell (pack command) empty
+
+newShell ::MonadIO io => io ExitCode
+newShell = Turtle.system (System.Process.proc "/bin/sh" []) empty

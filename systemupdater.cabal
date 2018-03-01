@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     SystemUpdater.Data
   build-depends:       base >= 4.7 && < 5
-                     , turtle
+                     , turtle >= 1.5
                      , text
                      , containers 
                      , aeson >= 0.10
@@ -29,8 +29,10 @@ executable systemupdater
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , systemupdater
+                     , managed
                      , turtle
                      , text
+                     , process
                      , bytestring
                      , containers 
                      , system-filepath
